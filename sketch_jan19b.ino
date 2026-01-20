@@ -1,0 +1,56 @@
+#include <Stepper.h>
+
+const int STEPS_PER_REV = 2048;
+Stepper myStepper(STEPS_PER_REV, 8, 10, 9, 11);
+
+const int JOY_X_PIN = A0;
+
+const int MAX_RPM = 15;
+
+// Dead zone range
+const int DEAD_LOW  = 450;
+const int DEAD_HIGH = 560;
+
+void setup() {
+  Serial.begin(9600);
+  int joy = analogRead(JOY_X_PIN);
+Serial.println(joy);
+
+  myStepper.setSpeed(15);
+}
+
+void loop() {
+  int joy = analogRead(JOY_X_PIN);  // 0–1023
+
+  // If joystick is in the dead zone, stop immediately and do nothing else
+  if (joy >= DEAD_LOW && joy <= DEAD_HIGH) {
+    // De‑energize coils so motor doesn’t keep pushing
+    for (int pin = 8; pin <= 11; pin++) {
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, LOW);
+    }
+    return;  // no steps this loop
+  }
+
+  long speedRPM;
+
+  if (joy < DEAD_LOW) {
+    // Left side: 0–(DEAD_LOW‑1) → reverse
+    speedRPM = map(joy, 0, DEAD_LOW - 1, -MAX_RPM, -1);
+  } else {
+    // Right side: (DEAD_HIGH+1)–1023 → forward
+    speedRPM = map(joy, DEAD_HIGH + 1, 1023, 1, MAX_RPM);
+  }
+
+  int direction = (speedRPM > 0) ? 1 : -1;
+  int rpm = abs(speedRPM);
+   // safety; no movement
+
+  myStepper.setSpeed(rpm);
+
+  // Take ONLY one small step each loop.
+  // If you let go of the joystick, next loop hits the dead zone and stops.
+  myStepper.step(direction);
+
+  delay(10);
+}
