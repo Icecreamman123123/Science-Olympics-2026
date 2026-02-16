@@ -1,0 +1,38 @@
+#include <Stepper.h>
+
+const int STEPS_PER_REV = 2048;
+Stepper myStepper(STEPS_PER_REV, 8, 10, 9, 11);
+
+const int POT_PIN = A0;
+const int MAX_RPM = 15;
+
+void setup() {
+  Serial.begin(9600);
+  myStepper.setSpeed(0);   // start stopped
+}
+
+void loop() {
+  int pot = analogRead(POT_PIN);   // 0–1023
+
+  // Map 0–1023 to -MAX_RPM … +MAX_RPM (0 is stop)
+  long speedRPM = map(pot, 0, 1023, -MAX_RPM, MAX_RPM);
+
+  // Small dead band around 0 so it really stops
+  if (abs(speedRPM) < 1) {
+    // De‑energize coils
+    for (int pin = 8; pin <= 11; pin++) {
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, LOW);
+    }
+    delay(10);
+    return;
+  }
+
+  int direction = (speedRPM > 0) ? 1 : -1;
+  int rpm = abs(speedRPM);
+
+  myStepper.setSpeed(rpm);
+  myStepper.step(direction);   // one step each loop
+
+  delay(10);
+}
